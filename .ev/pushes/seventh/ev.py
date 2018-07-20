@@ -23,12 +23,14 @@ create_list = [map_path, evignore_path]
 def push(push_tag):
     # TODO: tag may not contain whitespaces! (cut them away)
     # TODO: with certain push_tag automatically generate unique push_tag
+    # TODO: add .evignore functionality
 
     # adding dirs / files to ignore from .evignore
     with open(evignore_path) as f:
         evignore_content = f.readlines()
     evignore_content = [ignore_list.append(
         x.strip()) for x in evignore_content]
+    print(ignore_list)
 
     # create (if not exists) .ev/
     if not os.path.exists(ev_dir):
@@ -50,6 +52,7 @@ def push(push_tag):
     # copy all files and folders excluding ignore_list to new folder
     for item in os.listdir(current_dir):
         if item not in ignore_list:
+            print(item)
             if os.path.isfile(item):
                 shutil.copyfile(current_dir+'/'+item, push_path+item)
             elif os.path.isdir(item):

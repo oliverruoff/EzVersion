@@ -23,6 +23,7 @@ create_list = [map_path, evignore_path]
 def push(push_tag):
     # TODO: tag may not contain whitespaces! (cut them away)
     # TODO: with certain push_tag automatically generate unique push_tag
+    # TODO: add .evignore functionality
 
     # adding dirs / files to ignore from .evignore
     with open(evignore_path) as f:
