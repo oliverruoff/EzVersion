@@ -24,12 +24,6 @@ def push(push_tag):
     # TODO: tag may not contain whitespaces! (cut them away)
     # TODO: with certain push_tag automatically generate unique push_tag
 
-    # adding dirs / files to ignore from .evignore
-    with open(evignore_path) as f:
-        evignore_content = f.readlines()
-    evignore_content = [ignore_list.append(
-        x.strip()) for x in evignore_content]
-
     # create (if not exists) .ev/
     if not os.path.exists(ev_dir):
         print('No .ev directory detected, creating one.')
@@ -39,6 +33,12 @@ def push(push_tag):
                 os.utime(f, None)
 
     push_path = pushes_dir + push_tag + '/'
+
+    # adding dirs / files to ignore from .evignore
+    with open(evignore_path) as f:
+        evignore_content = f.readlines()
+    evignore_content = [ignore_list.append(
+        x.strip()) for x in evignore_content]
 
     # create new folder in .ev/ with unique ID (millisecs date sufficient?)
     while os.path.exists(push_path):
