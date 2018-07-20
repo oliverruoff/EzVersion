@@ -9,9 +9,12 @@ import shutil
 
 def push(push_tag):
     # TODO: tag may not contain whitespaces! (cut them away)
+    # TODO: with certain push_tag automatically generate unique push_tag
+    # TODO: add .evignore functionality
+
     # create (if not exists) .ev/
     if not os.path.exists(current_dir+'/.ev/'):
-        print('No ev directory detected, creating one.')
+        print('No .ev directory detected, creating one.')
         os.makedirs(current_dir+'/.ev/pushes/')
         map_path = current_dir+'/.ev/push_map.txt'
         with open(map_path, 'a'):
