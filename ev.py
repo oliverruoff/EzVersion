@@ -10,7 +10,7 @@ import shutil
 current_dir = os.getcwd()
 ev_dir = current_dir + '/.ev/'
 pushes_dir = ev_dir + '/pushes/'
-map_path = ev_dir + 'push_map'
+map_path = ev_dir + '.push_map'
 evignore_path = ev_dir + '.evignore'
 
 
@@ -23,6 +23,7 @@ create_list = [map_path, evignore_path]
 def push(push_tag):
     # TODO: tag may not contain whitespaces! (cut them away)
     # TODO: with certain push_tag automatically generate unique push_tag
+    # TODO: Add compression instead of simply copying files
 
     # create (if not exists) .ev/
     if not os.path.exists(ev_dir):
@@ -56,10 +57,17 @@ def push(push_tag):
                 shutil.copytree(current_dir+'/'+item, push_path+item)
 
     # create file in .ev/ to map push tag to date and push_id
+    last_line = read_last_line(map_path)
+    print(last_line)
+    if last_line == 0:
+        push_map_string = '0 - ' + push_tag + '\n'
+    else:
+        push_map_string = str(
+            int(last_line.split()[0]) + 1) + ' - ' + push_tag + '\n'
     with open(map_path, 'a') as myfile:
-        myfile.write(push_tag+'\n')
+        myfile.write(push_map_string)
 
-    print('Pushed \''+push_tag+'\'')
+    print('Pushed', push_map_string)
 
 
 def pull(push_id):
@@ -89,6 +97,16 @@ def help():
     print('push <tag>	-	Creates new push with tag')
     print('pull <tag>	-	Rerolls to specific push')
     # TODO: add all commands
+
+
+def read_last_line(file):
+    file_handle = open(file, "r")
+    line_list = file_handle.readlines()
+    file_handle.close()
+    if len(line_list) > 0:
+        return line_list[len(line_list)-1]
+    else:
+        return 0
 
 
 for idx, arg in enumerate(sys.argv):
