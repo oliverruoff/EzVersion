@@ -18,15 +18,14 @@ curr_push_path = ev_dir + '.curr_push'
 ignore_list = ['.ev', '.evignore']
 # list of files to be created in .ev directory
 create_list = [map_path, evignore_path, curr_push_path]
-# Defining the push the user is working on at the moment
-curr_push = 0
 
 
 def push(push_tag):
+    # TODO: tag may not contain whitespaces! (cut them away)
+    # TODO: with certain push_tag automatically generate unique push_tag
     # TODO: Add compression instead of simply copying files
 
     global curr_push
-    global ignore_list
 
     # create (if not exists) .ev/
     if not os.path.exists(ev_dir):
@@ -46,7 +45,11 @@ def push(push_tag):
 
     push_path = pushes_dir + curr_push + ' - ' + push_tag + '/'
 
-    update_ignore_list()
+    # adding dirs / files to ignore from .evignore
+    with open(evignore_path) as f:
+        evignore_content = f.readlines()
+    evignore_content = [ignore_list.append(
+        x.strip()) for x in evignore_content]
 
     # create new folder in .ev/ with unique ID
     while os.path.exists(push_path):
@@ -60,7 +63,8 @@ def push(push_tag):
     with open(map_path, 'a') as myfile:
         myfile.write(push_map_string)
     # switching current push
-    write_curr_push(curr_push)
+    with open(curr_push_path, 'w') as myfile:
+        myfile.write(curr_push)
 
     # copy all files and folders excluding ignore_list to new folder
     for item in os.listdir(current_dir):
@@ -74,10 +78,6 @@ def push(push_tag):
 
 
 def pull(push_id):
-
-    global ignore_list
-    update_ignore_list()
-
     # check if push path exists
     if not os.path.exists(pushes_dir) or len(os.listdir(pushes_dir)) < 1:
         print('No pushes found! Please use ev push ' +
@@ -89,30 +89,14 @@ def pull(push_id):
         print('Push id', push_id, 'does not exist!')
         return 0
 
-    des_push_tup = [i for i in push_ids if push_id == i[0]][0]
-    des_push_tag = des_push_tup[1]
-    des_push_id = des_push_tup[0]
+    print([i[1] for i in push_ids if push_id == i[0]][0])
 
-    desired_pull_dir = pushes_dir + des_push_tag
+    desired_push_path = pushes_dir + \
+        [i[1] for i in push_ids if push_id == i[0]][0]
 
-    # delete  files from current dir
-    for item in os.listdir(current_dir):
-        if item not in ignore_list:
-            if os.path.isfile(item):
-                os.unlink(current_dir+'/'+item)
-            elif os.path.isdir(item):
-                shutil.rmtree(current_dir+'/'+item)
+    print('Desired push path:', desired_push_path)
 
-    # copy desired push to working directory
-    for item in os.listdir(desired_pull_dir):
-        if os.path.isfile(desired_pull_dir + '/' + item):
-            shutil.copyfile(desired_pull_dir+'/'+item, current_dir+'/'+item)
-        elif os.path.isdir(desired_pull_dir + '/' + item):
-            shutil.copytree(desired_pull_dir+'/'+item, current_dir+'/'+item)
-
-    write_curr_push(des_push_id)
-
-    print('Pulled push:', des_push_tag)
+    print('Pulling push id:', push_id)
     # search (if exists) in .ev/pushes/push_tag
 
 
@@ -129,15 +113,14 @@ def curr():
 
 def list_pushes():
     print('Pushes:')
-    for i in read_file(map_path):
-        print(i)
+    # list all pushes chronically and with tag
 
 # Lists all commands available
 
 
 def help():
-    print('push / ps <tag>	-	Creates new push with tag')
-    print('pull / pl <tag>	-	Rerolls to specific push')
+    print('push <tag>	-	Creates new push with tag')
+    print('pull <tag>	-	Rerolls to specific push')
     # TODO: add all commands
 
 
@@ -155,50 +138,24 @@ def read_last_line(file):
     else:
         return 0
 
-
-def update_ignore_list():
-    global ignore_list
-    # adding dirs / files to ignore from .evignore
-    with open(evignore_path) as f:
-        evignore_content = f.readlines()
-    [ignore_list.append(
-        x.strip()) for x in evignore_content]
-
-
-def write_curr_push(curr_push):
-    if os.path.exists(curr_push_path):
-        with open(curr_push_path, 'w') as myfile:
-            myfile.write(curr_push)
-    else:
-        print('There is no curr_push file, initialize EzVersion by pushing.')
-
-
-def read_curr_push():
-    global curr_push
-    if os.path.exists(curr_push_path):
-        curr_push = read_file(curr_push_path)[0]
-    else:
-        curr_push = '0'
-
-
-def status():
-    print('Current push:', curr_push)
-
 # Starting point ------------------------------------
 
 
 # the push number the user is currently working on
-read_curr_push()
+if os.path.exists(curr_push_path):
+    curr_push = read_file(curr_push_path)[0]
+else:
+    curr_push = '0'
 
 for idx, arg in enumerate(sys.argv):
     if idx == 1:
-        if arg == 'push' or arg == 'ps':
+        if arg == 'push':
             if len(sys.argv) >= 3:
                 push(sys.argv[idx+1])
             else:
                 print('3rd argument missing! Please enter tag!')
 
-        elif arg == 'pull' or arg == 'pl':
+        elif arg == 'pull':
             if len(sys.argv) >= 3:
                 pull(sys.argv[idx+1])
 
@@ -206,7 +163,3 @@ for idx, arg in enumerate(sys.argv):
                 print('3rd argument missing! Please enter tag to pull!')
         elif arg == 'help':
             help()
-        elif arg == 'status':
-            status()
-        elif arg == 'ls' or arg == 'list':
-            list_pushes()

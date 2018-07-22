@@ -18,8 +18,6 @@ curr_push_path = ev_dir + '.curr_push'
 ignore_list = ['.ev', '.evignore']
 # list of files to be created in .ev directory
 create_list = [map_path, evignore_path, curr_push_path]
-# Defining the push the user is working on at the moment
-curr_push = 0
 
 
 def push(push_tag):
@@ -129,8 +127,7 @@ def curr():
 
 def list_pushes():
     print('Pushes:')
-    for i in read_file(map_path):
-        print(i)
+    # list all pushes chronically and with tag
 
 # Lists all commands available
 
@@ -174,7 +171,6 @@ def write_curr_push(curr_push):
 
 
 def read_curr_push():
-    global curr_push
     if os.path.exists(curr_push_path):
         curr_push = read_file(curr_push_path)[0]
     else:
@@ -188,7 +184,7 @@ def status():
 
 
 # the push number the user is currently working on
-read_curr_push()
+curr_push = read_curr_push()
 
 for idx, arg in enumerate(sys.argv):
     if idx == 1:
@@ -208,5 +204,5 @@ for idx, arg in enumerate(sys.argv):
             help()
         elif arg == 'status':
             status()
-        elif arg == 'ls' or arg == 'list':
-            list_pushes()
+
+# 2
