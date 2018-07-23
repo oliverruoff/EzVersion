@@ -1,6 +1,6 @@
 # @auth: Oliver Ruoff
 # for better use, copy this script to e.g. /usr/local/ev.py
-# and create alias e.g. "alias ev='python /usr/local/ev.py"
+# and create (Unix) alias e.g. "alias ev='python /usr/local/ev.py"
 
 import sys
 import os
@@ -23,6 +23,10 @@ curr_push = 0
 
 
 def push(push_tag):
+    # creates new push, including all entries in affected files.
+    # if it is the first push, ev structure gets initialized
+    # push tag is optional, if empty 'v<push_id>' is added after push_id
+    # e.g.: 3 - v3
     # TODO: Add compression instead of simply copying files
 
     global curr_push
@@ -73,7 +77,7 @@ def push(push_tag):
 
 
 def pull(push_id):
-
+    # loads a push with push_id to the working directory
     global ignore_list
     update_ignore_list()
 
@@ -109,38 +113,63 @@ def pull(push_id):
         elif os.path.isdir(desired_pull_dir + '/' + item):
             shutil.copytree(desired_pull_dir+'/'+item, current_dir+'/'+item)
 
+    # updates .ev/.current_push file
     write_curr_push(des_push_id)
 
     print('Pulled push:', des_push_tag)
-    # search (if exists) in .ev/pushes/push_tag
+
+
+def status():
+    # prints out the curent push, the user is working on atm
+    print('Current push:', curr_push)
 
 
 def back():
-    print('Going back to the last push!')  # TODO: Mention push_id
-    # push tmp_current push (to jump back)
-    # pull previous push
+    # pulls one push before the current one if exists
+    curr_push = get_curr_push()
+    if int(curr_push) <= 0:
+        print('You are on the first push, can\'t go back!')
+        return 0
+    pull(str(int(curr_push) - 1))
 
 
-def curr():
-    print('Reloading current push!')
-    # pull tmp_current (created at back())
+def forward():
+    # pulls one push after the current one if exists
+    curr_push = get_curr_push()
+    if curr_push == read_last_line(map_path).split()[0]:
+        print('You are on the latest push, can\'t go forward!')
+        return 0
+    elif curr_push > read_last_line(map_path).split()[0]:
+        print('ERROR! The current push is newer than the latest one!' +
+              ' This should never happen!')
+    pull(str(int(curr_push)+1))
+
+
+def latest():
+    # pulls the latest push
+    pull(read_last_line(map_path).split()[0])
 
 
 def list_pushes():
+    # prints out all pushes that were made
     print('Pushes:')
-    for i in read_file(map_path):
-        print(i)
-
-# Lists all commands available
+    print(''.join(read_file(map_path)))
 
 
 def help():
+    # prints out available commands and their descriptions
     print('push / ps <tag>	-	Creates new push with tag')
     print('pull / pl <tag>	-	Rerolls to specific push')
-    # TODO: add all commands
+    print('status / st      -   Shows push user is on atm')
+    print('list / ls        -   Lists all pushes')
+    print('latest / la      -   Pulls the latest push')
+    print('back / b         -   Pulls the push before the current one')
+    print('forward / f      -   Pulls the push after the current one')
+    print('help / h         -   Shows available commands')
 
 
 def read_file(file):
+    # reads file, saves each line as entry in list
     file_handle = open(file, "r")
     line_list = file_handle.readlines()
     file_handle.close()
@@ -148,6 +177,8 @@ def read_file(file):
 
 
 def read_last_line(file):
+    # reads and returns the last line of a file.
+    # if file is empty, returns -1
     line_list = read_file(file)
     if len(line_list) > 0:
         return line_list[len(line_list)-1]
@@ -156,6 +187,7 @@ def read_last_line(file):
 
 
 def update_ignore_list():
+    # reads .ev/.evignore and adds it to the internal ignore list
     global ignore_list
     # adding dirs / files to ignore from .evignore
     with open(evignore_path) as f:
@@ -165,6 +197,7 @@ def update_ignore_list():
 
 
 def write_curr_push(curr_push):
+    # writes an integer to the .ev/.curr_push file
     if os.path.exists(curr_push_path):
         with open(curr_push_path, 'w') as myfile:
             myfile.write(curr_push)
@@ -172,23 +205,23 @@ def write_curr_push(curr_push):
         print('There is no curr_push file, initialize EzVersion by pushing.')
 
 
-def read_curr_push():
+def get_curr_push():
+    # reads ./ev/.curr_push and sets 'curr_push' class var, also
+    # returns it. returns '0' if .curr_push doesn't exist
     global curr_push
     if os.path.exists(curr_push_path):
         curr_push = read_file(curr_push_path)[0]
+        return curr_push
     else:
         curr_push = '0'
+        return '0'
 
-
-def status():
-    print('Current push:', curr_push)
 
 # Starting point ------------------------------------
+# loading current push to env
+get_curr_push()
 
-
-# the push number the user is currently working on
-read_curr_push()
-
+# handling arguments
 for idx, arg in enumerate(sys.argv):
     if idx == 1:
         if arg == 'push' or arg == 'ps':
@@ -199,12 +232,20 @@ for idx, arg in enumerate(sys.argv):
         elif arg == 'pull' or arg == 'pl':
             if len(sys.argv) >= 3:
                 pull(sys.argv[idx+1])
-
             else:
                 print('3rd argument missing! Please enter tag to pull!')
-        elif arg == 'help':
+        elif arg == 'help' or arg == 'h':
             help()
-        elif arg == 'status':
+        elif arg == 'status' or arg == 'st':
             status()
-        elif arg == 'ls' or arg == 'list':
+        elif arg == 'list' or arg == 'ls':
             list_pushes()
+        elif arg == 'latest' or arg == 'la':
+            latest()
+        elif arg == 'back' or arg == 'b':
+            back()
+        elif arg == 'forward' or arg == 'f':
+            forward()
+        else:
+            print('Command not recognized! Available commands:')
+            help()
