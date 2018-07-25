@@ -76,7 +76,7 @@ def push(push_tag):
     # zip created directory
     shutil.make_archive(push_path, 'zip', push_path)
     # remove unzipped directory
-    shutil.rmtree(push_path)
+    shutil.rmtree(push_path, ignore_errors=True)
 
     print('Pushed', push_map_string)
 
@@ -112,10 +112,10 @@ def pull(push_id):
             if os.path.isfile(item):
                 os.unlink(current_dir+'/'+item)
             elif os.path.isdir(item):
-                shutil.rmtree(current_dir+'/'+item)
+                shutil.rmtree(current_dir+'/'+item, ignore_errors=True)
 
     # copy zip to working dir
-    shutil.copyfile(desired_pull_dir, current_dir+'/'+des_push_tag)
+    shutil.copy(desired_pull_dir, current_dir+'/'+des_push_tag)
     # extracting zip
     shutil.unpack_archive(current_dir+'/'+des_push_tag)
     # remove zip from working dir
