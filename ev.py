@@ -73,11 +73,19 @@ def push(push_tag):
             elif os.path.isdir(item):
                 shutil.copytree(current_dir+'/'+item, push_path+item)
 
+    # zip created directory
+    shutil.make_archive(push_path, 'zip', push_path)
+    # remove unzipped directory
+    shutil.rmtree(push_path)
+
     print('Pushed', push_map_string)
 
 
 def pull(push_id):
     # loads a push with push_id to the working directory
+    if not os.path.exists(ev_dir):
+        print('There is no .ev file, initialize EzVersion by pushing.')
+        return 0
     global ignore_list
     update_ignore_list()
 
@@ -106,12 +114,12 @@ def pull(push_id):
             elif os.path.isdir(item):
                 shutil.rmtree(current_dir+'/'+item)
 
-    # copy desired push to working directory
-    for item in os.listdir(desired_pull_dir):
-        if os.path.isfile(desired_pull_dir + '/' + item):
-            shutil.copyfile(desired_pull_dir+'/'+item, current_dir+'/'+item)
-        elif os.path.isdir(desired_pull_dir + '/' + item):
-            shutil.copytree(desired_pull_dir+'/'+item, current_dir+'/'+item)
+    # copy zip to working dir
+    shutil.copyfile(desired_pull_dir, current_dir+'/'+des_push_tag)
+    # extracting zip
+    shutil.unpack_archive(current_dir+'/'+des_push_tag)
+    # remove zip from working dir
+    os.unlink(current_dir+'/'+des_push_tag)
 
     # updates .ev/.current_push file
     write_curr_push(des_push_id)
@@ -135,6 +143,9 @@ def back():
 
 def forward():
     # pulls one push after the current one if exists
+    if not os.path.exists(ev_dir):
+        print('There is no .ev file, initialize EzVersion by pushing.')
+        return 0
     curr_push = get_curr_push()
     if curr_push == read_last_line(map_path).split()[0]:
         print('You are on the latest push, can\'t go forward!')
@@ -147,11 +158,17 @@ def forward():
 
 def latest():
     # pulls the latest push
+    if not os.path.exists(ev_dir):
+        print('There is no .ev file, initialize EzVersion by pushing.')
+        return 0
     pull(read_last_line(map_path).split()[0])
 
 
 def list_pushes():
     # prints out all pushes that were made
+    if not os.path.exists(ev_dir):
+        print('There is no .ev file, initialize EzVersion by pushing.')
+        return 0
     print('Pushes:')
     print(''.join(read_file(map_path)))
 
