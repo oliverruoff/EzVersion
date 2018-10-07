@@ -8,6 +8,7 @@ just  a file (without having the repository overhead)
 
 Stop adding "very_final_last_rework_99999" to your file endings and start using EzVersion :D
 
+## Structure 
 - [How it works](#how-it-works)
 - [Installation](#installation)
 - [Commands](#commands)
