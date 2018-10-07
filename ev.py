@@ -7,47 +7,49 @@ import os
 import shutil
 
 # paths to directories / files
-current_dir = os.getcwd()
-ev_dir = current_dir + '/.ev/'
-pushes_dir = ev_dir + 'pushes/'
-map_path = ev_dir + '.push_map'
-evignore_path = ev_dir + '.evignore'
-curr_push_path = ev_dir + '.curr_push'
+CURRENT_DIR = os.getcwd()
+EV_DIR = os.path.join(CURRENT_DIR, '.ev')
+PUSHES_DIR = os.path.join(EV_DIR, 'pushes')
+MAP_PATH = os.path.join(EV_DIR, '.push_map')
+EVIGNORE_PATH = os.path.join(EV_DIR, '.evignore')
+CURR_PUSH_PATH = os.path.join(EV_DIR, '.curr_push')
 
 # list of directories / files that will be ignored by pushing
-ignore_list = ['.ev', '.evignore']
+IGNORE_LIST = ['.ev', '.evignore']
 # list of files to be created in .ev directory
-create_list = [map_path, evignore_path, curr_push_path]
+CREATE_LIST = [MAP_PATH, EVIGNORE_PATH, CURR_PUSH_PATH]
 # Defining the push the user is working on at the moment
-curr_push = 0
+CURR_PUSH = 0
 
 
 def push(push_tag):
-    # creates new push, including all entries in affected files.
-    # if it is the first push, ev structure gets initialized
-    # push tag is optional, if empty 'v<push_id>' is added after push_id
-    # e.g.: 3 - v3
-    # TODO: Add compression instead of simply copying files
+    '''creates new push, including all entries in affected files.
+    if it is the first push, ev structure gets initialized
+    push tag is optional, if empty 'v<push_id>' is added after push_id
+    e.g.: 3 - v3
 
-    global curr_push
-    global ignore_list
+    Arguments:
+        push_tag {String} -- Name of push
+    '''
+    global CURR_PUSH
+    global IGNORE_LIST
 
     # create (if not exists) .ev/
-    if not os.path.exists(ev_dir):
+    if not os.path.exists(EV_DIR):
         print('No .ev directory detected, creating one.')
-        os.makedirs(pushes_dir)
-        for f in create_list:
+        os.makedirs(PUSHES_DIR)
+        for f in CREATE_LIST:
             with open(f, 'a'):
                 os.utime(f, None)
 
     # getting new push id
-    last_line = read_last_line(map_path)
-    curr_push = str(int(last_line.split()[0]) + 1)
+    last_line = read_last_line(MAP_PATH)
+    CURR_PUSH = str(int(last_line.split()[0]) + 1)
     if push_tag == '*':
-        push_tag = 'v' + curr_push
-    push_map_string = curr_push + ' - ' + push_tag + '\n'
+        push_tag = 'v' + CURR_PUSH
+    push_map_string = CURR_PUSH + ' - ' + push_tag + '\n'
 
-    push_path = pushes_dir + curr_push + ' - ' + push_tag + '/'
+    push_path = os.path.join(PUSHES_DIR, CURR_PUSH + ' - ' + push_tag)
 
     update_ignore_list()
 
@@ -55,23 +57,25 @@ def push(push_tag):
     while os.path.exists(push_path):
         push_tag = input(
             'Tag '+push_tag+' already exists! Enter new (unique) tag.>>')
-        push_path = pushes_dir+push_tag+'/'
+        push_path = os.path.join(PUSHES_DIR, push_tag)
     os.makedirs(push_path)
 
     # create file in .ev/.push_map to map push tag to date and push_id
     # appending new push to map
-    with open(map_path, 'a') as myfile:
+    with open(MAP_PATH, 'a') as myfile:
         myfile.write(push_map_string)
     # switching current push
-    write_curr_push(curr_push)
+    write_curr_push(CURR_PUSH)
 
-    # copy all files and folders excluding ignore_list to new folder
-    for item in os.listdir(current_dir):
-        if item not in ignore_list:
+    # copy all files and folders excluding IGNORE_LIST to new folder
+    for item in os.listdir(CURRENT_DIR):
+        if item not in IGNORE_LIST:
             if os.path.isfile(item):
-                shutil.copyfile(current_dir+'/'+item, push_path+item)
+                shutil.copyfile(os.path.join(
+                    CURRENT_DIR, item), os.path.join(push_path, item))
             elif os.path.isdir(item):
-                shutil.copytree(current_dir+'/'+item, push_path+item)
+                shutil.copytree(os.path.join(
+                    CURRENT_DIR, item), os.path.join(push_path, item))
 
     # zip created directory
     shutil.make_archive(push_path, 'zip', push_path)
@@ -82,44 +86,54 @@ def push(push_tag):
 
 
 def pull(push_id):
-    # loads a push with push_id to the working directory
-    if not os.path.exists(ev_dir):
+    '''loads a push with push_id to the working directory
+
+    Arguments:
+        push_id {Integer} -- Id of a push
+
+    Returns:
+        Integer -- 1 if no .ev folder found
+                     2 if no pushes found
+                     3 if certain push id not found
+    '''
+    if not os.path.exists(EV_DIR):
         print('There is no .ev file, initialize EzVersion by pushing.')
-        return 0
-    global ignore_list
+        return 1
+    global IGNORE_LIST
     update_ignore_list()
 
     # check if push path exists
-    if not os.path.exists(pushes_dir) or len(os.listdir(pushes_dir)) < 1:
+    if not os.path.exists(PUSHES_DIR) or len(os.listdir(PUSHES_DIR)) < 1:
         print('No pushes found! Please use ev push ' +
               '<tag> to initialize EzVersion.')
-        return 0
-    push_ids = [(i.split()[0], i) for i in os.listdir(pushes_dir)]
+        return 2
+    push_ids = [(i.split()[0], i) for i in os.listdir(PUSHES_DIR)]
     # check if certain push exists
     if push_id not in [i[0] for i in push_ids]:
         print('Push id', push_id, 'does not exist!')
-        return 0
+        return 3
 
     des_push_tup = [i for i in push_ids if push_id == i[0]][0]
     des_push_tag = des_push_tup[1]
     des_push_id = des_push_tup[0]
 
-    desired_pull_dir = pushes_dir + des_push_tag
+    desired_pull_dir = PUSHES_DIR + os.sep + des_push_tag
 
     # delete  files from current dir
-    for item in os.listdir(current_dir):
-        if item not in ignore_list:
+    for item in os.listdir(CURRENT_DIR):
+        if item not in IGNORE_LIST:
             if os.path.isfile(item):
-                os.unlink(current_dir+'/'+item)
+                os.unlink(os.path.join(CURRENT_DIR, item))
             elif os.path.isdir(item):
-                shutil.rmtree(current_dir+'/'+item, ignore_errors=True)
+                shutil.rmtree(os.path.join(CURRENT_DIR, item),
+                              ignore_errors=True)
 
     # copy zip to working dir
-    shutil.copy(desired_pull_dir, current_dir+'/'+des_push_tag)
+    shutil.copyfile(desired_pull_dir, os.path.join(CURRENT_DIR, des_push_tag))
     # extracting zip
-    shutil.unpack_archive(current_dir+'/'+des_push_tag)
+    shutil.unpack_archive(os.path.join(CURRENT_DIR, des_push_tag))
     # remove zip from working dir
-    os.unlink(current_dir+'/'+des_push_tag)
+    os.unlink(os.path.join(CURRENT_DIR, des_push_tag))
 
     # updates .ev/.current_push file
     write_curr_push(des_push_id)
@@ -128,53 +142,72 @@ def pull(push_id):
 
 
 def status():
-    # prints out the curent push, the user is working on atm
-    print('Current push:', curr_push)
+    '''prints out the curent push, the user is working on atm
+    '''
+    print('Current push:', CURR_PUSH)
 
 
 def back():
-    # pulls one push before the current one if exists
-    curr_push = get_curr_push()
-    if int(curr_push) <= 0:
+    '''pulls one push before the current one if exists
+
+    Returns:
+        Integer -- 0 if user is on the first push and can't go back
+    '''
+    CURR_PUSH = get_curr_push()
+    if int(CURR_PUSH) <= 0:
         print('You are on the first push, can\'t go back!')
         return 0
-    pull(str(int(curr_push) - 1))
+    pull(str(int(CURR_PUSH) - 1))
 
 
 def forward():
-    # pulls one push after the current one if exists
-    if not os.path.exists(ev_dir):
+    '''pulls one push after the current one, if exists
+
+    Returns:
+        Integer -- 0 if there is no .ev folder
+                   1 if user is on the latest push and can't go any further
+    '''
+    if not os.path.exists(EV_DIR):
         print('There is no .ev file, initialize EzVersion by pushing.')
         return 0
-    curr_push = get_curr_push()
-    if curr_push == read_last_line(map_path).split()[0]:
+    CURR_PUSH = get_curr_push()
+    if CURR_PUSH == read_last_line(MAP_PATH).split()[0]:
         print('You are on the latest push, can\'t go forward!')
-        return 0
-    elif curr_push > read_last_line(map_path).split()[0]:
+        return 1
+    elif CURR_PUSH > read_last_line(MAP_PATH).split()[0]:
         print('ERROR! The current push is newer than the latest one!' +
               ' This should never happen!')
-    pull(str(int(curr_push)+1))
+    pull(str(int(CURR_PUSH)+1))
 
 
 def latest():
-    # pulls the latest push
-    if not os.path.exists(ev_dir):
+    '''pulls the latest push
+
+    Returns:
+        Integer -- 0 if no .ev folder exists
+    '''
+    if not os.path.exists(EV_DIR):
         print('There is no .ev file, initialize EzVersion by pushing.')
         return 0
-    pull(read_last_line(map_path).split()[0])
+    pull(read_last_line(MAP_PATH).split()[0])
 
 
 def list_pushes():
-    # prints out all pushes that were made
-    if not os.path.exists(ev_dir):
+    '''Prints out all pushes that have been made
+
+    Returns:
+        Integer -- 0 if no .ev folder exists
+    '''
+    if not os.path.exists(EV_DIR):
         print('There is no .ev file, initialize EzVersion by pushing.')
         return 0
     print('Pushes:')
-    print(''.join(read_file(map_path)))
+    print(''.join(read_file(MAP_PATH)))
 
 
 def help():
-    # prints out available commands and their descriptions
+    '''Prints out all available comamnds and their descriptions
+    '''
     print('push / ps <tag>	-	Creates new push with tag')
     print('pull / pl <tag>	-	Rerolls to specific push')
     print('status / st      -   Shows push user is on atm')
@@ -186,7 +219,14 @@ def help():
 
 
 def read_file(file):
-    # reads file, saves each line as entry in list
+    '''Reads file, saves each line as entry in list
+
+    Arguments:
+        file {String} -- name of file
+
+    Returns:
+        list -- list that contains each line of file as entry
+    '''
     file_handle = open(file, "r")
     line_list = file_handle.readlines()
     file_handle.close()
@@ -194,8 +234,15 @@ def read_file(file):
 
 
 def read_last_line(file):
-    # reads and returns the last line of a file.
-    # if file is empty, returns -1
+    '''Reads and returns the last line of a file.
+    If file is empty, returs -1.
+
+    Arguments:
+        file {String} -- name of file
+
+    Returns:
+        String -- Last line of a file
+    '''
     line_list = read_file(file)
     if len(line_list) > 0:
         return line_list[len(line_list)-1]
@@ -204,33 +251,42 @@ def read_last_line(file):
 
 
 def update_ignore_list():
-    # reads .ev/.evignore and adds it to the internal ignore list
-    global ignore_list
+    '''reads .ev/.evignore and adds it to the internal ignore list
+    '''
+    global IGNORE_LIST
     # adding dirs / files to ignore from .evignore
-    with open(evignore_path) as f:
+    with open(EVIGNORE_PATH) as f:
         evignore_content = f.readlines()
-    [ignore_list.append(
+    [IGNORE_LIST.append(
         x.strip()) for x in evignore_content]
 
 
-def write_curr_push(curr_push):
-    # writes an integer to the .ev/.curr_push file
-    if os.path.exists(curr_push_path):
-        with open(curr_push_path, 'w') as myfile:
-            myfile.write(curr_push)
+def write_curr_push(CURR_PUSH):
+    '''writes an integer to the .ev/.CURR_PUSH file
+
+    Arguments:
+        CURR_PUSH {Integer} -- If of the current push
+    '''
+    if os.path.exists(CURR_PUSH_PATH):
+        with open(CURR_PUSH_PATH, 'w') as myfile:
+            myfile.write(CURR_PUSH)
     else:
-        print('There is no curr_push file, initialize EzVersion by pushing.')
+        print('There is no CURR_PUSH file, initialize EzVersion by pushing.')
 
 
 def get_curr_push():
-    # reads ./ev/.curr_push and sets 'curr_push' class var, also
-    # returns it. returns '0' if .curr_push doesn't exist
-    global curr_push
-    if os.path.exists(curr_push_path):
-        curr_push = read_file(curr_push_path)[0]
-        return curr_push
+    '''reads ./ev/.CURR_PUSH and sets 'CURR_PUSH' class var, also
+    returns it. returns '0' if .CURR_PUSH doesn't exist
+
+    Returns:
+        Integer -- Current push id, or 0, if .CURR_PUSH doesn't exist
+    '''
+    global CURR_PUSH
+    if os.path.exists(CURR_PUSH_PATH):
+        CURR_PUSH = read_file(CURR_PUSH_PATH)[0]
+        return CURR_PUSH
     else:
-        curr_push = '0'
+        CURR_PUSH = '0'
         return '0'
 
 
