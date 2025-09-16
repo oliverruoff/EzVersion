@@ -205,6 +205,68 @@ def list_pushes():
     print(''.join(read_file(MAP_PATH)))
 
 
+def delete_push(push_id):
+    '''Deletes a stored push including its archive and map entry.
+
+    Arguments:
+        push_id {String} -- Id of the push that should be deleted
+
+    Returns:
+        Integer -- 1 if no .ev folder exists
+                   2 if no pushes exist
+                   3 if the specified push id does not exist
+                   0 if deletion was successful
+    '''
+    if not os.path.exists(EV_DIR):
+        print('There is no .ev file, initialize EzVersion by pushing.')
+        return 1
+
+    if not os.path.exists(PUSHES_DIR) or len(os.listdir(PUSHES_DIR)) < 1:
+        print('No pushes found! Nothing to delete.')
+        return 2
+
+    push_archives = os.listdir(PUSHES_DIR)
+    target_archive = None
+    for archive in push_archives:
+        if archive.split()[0] == push_id:
+            target_archive = archive
+            break
+
+    if target_archive is None:
+        print('Push id', push_id, 'does not exist!')
+        return 3
+
+    os.unlink(os.path.join(PUSHES_DIR, target_archive))
+
+    map_entries = read_file(MAP_PATH)
+    with open(MAP_PATH, 'w') as map_file:
+        for entry in map_entries:
+            if entry.split()[0] != push_id:
+                map_file.write(entry)
+
+    current_push = get_curr_push()
+    global CURR_PUSH
+
+    archive_display = os.path.splitext(target_archive)[0]
+    print('Deleted push:', archive_display)
+
+    if current_push == push_id:
+        remaining_entries = read_file(MAP_PATH)
+        if remaining_entries:
+            new_curr_push = remaining_entries[-1].split()[0]
+            write_curr_push(new_curr_push)
+            CURR_PUSH = new_curr_push
+            print('Switched current push to', new_curr_push)
+        else:
+            write_curr_push('0')
+            CURR_PUSH = '0'
+            print('No pushes left. Current push reset to 0.')
+    else:
+        CURR_PUSH = current_push
+
+    return 0
+
+
 def help():
     '''Prints out all available comamnds and their descriptions
     '''
@@ -212,6 +274,7 @@ def help():
     print('pull / pl <tag>	-	Rerolls to specific push')
     print('status / st      -   Shows push user is on atm')
     print('list / ls        -   Lists all pushes')
+    print('delete / rm <id> -   Deletes push with id')
     print('latest / la      -   Pulls the latest push')
     print('back / b         -   Pulls the push before the current one')
     print('forward / f      -   Pulls the push after the current one')
@@ -313,6 +376,11 @@ for idx, arg in enumerate(sys.argv):
             status()
         elif arg == 'list' or arg == 'ls':
             list_pushes()
+        elif arg == 'delete' or arg == 'rm':
+            if len(sys.argv) >= 3:
+                delete_push(sys.argv[idx+1])
+            else:
+                print('3rd argument missing! Please enter push id to delete!')
         elif arg == 'latest' or arg == 'la':
             latest()
         elif arg == 'back' or arg == 'b':

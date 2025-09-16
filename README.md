@@ -43,6 +43,7 @@ locate the ev.py script in every folder you like to versionate, but only in one 
 |pull <id>|pl <id>|Rerolls to specific push|
 |status|st|Shows push, user is working on at the moment|
 |list|ls|Lists all pushes|
+|delete <id>|rm <id>|Deletes a stored push|
 |latest|la|Pulls the latest push|
 |back|b|Pulls the push before the one, the user is currently working on|
 |forward|f|Pulls the push after the one, the user is currently working on|
